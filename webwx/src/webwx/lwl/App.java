@@ -5,6 +5,8 @@ import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 
 import javax.swing.UIManager;
@@ -20,6 +22,7 @@ import blade.kit.logging.LoggerFactory;
 import webwx.util.CookieUtil;
 import webwx.util.JSUtil;
 import webwx.util.Matchers;
+import java.util.Map;
 
 /**
  * Hello world!
@@ -31,6 +34,7 @@ public class App {
 	
 	private String uuid;
 	private int tip = 0;
+	private int iAction = 0;
 	private String base_uri, redirect_uri, webpush_url = "https://webpush2.weixin.qq.com/cgi-bin/mmwebwx-bin";
 	
 	private String skey, synckey, wxsid, wxuin, pass_ticket, deviceId = "e" + DateKit.getCurrentUnixTime();
@@ -45,7 +49,8 @@ public class App {
 	
 	// 微信特殊账号
 	private List<String> SpecialUsers = Arrays.asList("newsapp", "fmessage", "filehelper", "weibo", "qqmail", "fmessage", "tmessage", "qmessage", "qqsync", "floatbottle", "lbsapp", "shakeapp", "medianote", "qqfriend", "readerapp", "blogapp", "facebookapp", "masssendapp", "meishiapp", "feedsapp", "voip", "blogappweixin", "weixin", "brandsessionholder", "weixinreminder", "wxid_novlwrv3lqwv11", "gh_22b87fa7cb3c", "officialaccounts", "notification_messages", "wxid_novlwrv3lqwv11", "gh_22b87fa7cb3c", "wxitil", "userexperience_alarm", "notification_messages");
-	
+	private Map<String,String> UserLists = new HashMap<String,String>();
+	private Map<String,String> DebManMapList = new HashMap<String,String>();
 	public App() {
 		System.setProperty("jsse.enableSNIExtension", "false");
 	}
@@ -298,7 +303,19 @@ public class App {
 		}
 		return false;
 	}
-	
+	/**
+	 * 
+	 * @param string
+	 * @return 是否数字的串
+	 */
+	 public static boolean isInteger(String value) {
+		  try {
+		   Integer.parseInt(value);
+		   return true;
+		  } catch (NumberFormatException e) {
+		   return false;
+		  }
+		 }
 	/**
 	 * 获取联系人
 	 */
@@ -350,6 +367,8 @@ public class App {
 								continue;
 							}
 							ContactList.add(contact);
+							LOGGER.info("获取联系人=" + contact);							
+							UserLists.put(contact.getString("UserName"), contact.getString("NickName"));
 						}
 						return true;
 					}
@@ -486,30 +505,65 @@ public class App {
 		for(int i=0,len=AddMsgList.size(); i<len; i++){
 			LOGGER.info("[*] 你有新的消息，请注意查收");
 			JSONObject msg = AddMsgList.getJSONObject(i);
+			LOGGER.info( "msg obj=" +msg.toString() );
 			int msgType = msg.getInt("MsgType", 0);
 			String name = getUserRemarkName(msg.getString("FromUserName"));
 			String content = msg.getString("Content");
-			
+			String nickName = "";
 			if(msgType == 51){
 				LOGGER.info("[*] 成功截获微信初始化消息");
 			} else if(msgType == 1){
 				if(SpecialUsers.contains(msg.getString("ToUserName"))){
 					continue;
 				} else if(msg.getString("FromUserName").equals(User.getString("UserName"))){
-					continue;
+					String[] peopleContent = content.split(":<br/>");
+					LOGGER.info("content =" + content);
+					if (content.equals("开始")) {
+						iAction = 1;
+					}
+					if (content.equals("结束封盘")) {
+						iAction = 3;
+						Iterator iter = DebManMapList.entrySet().iterator();
+						String ans= "";
+						while (iter.hasNext()) {
+							Map.Entry entry = (Map.Entry) iter.next();
+							Object key = entry.getKey();
+							nickName = UserLists.get(key.toString());
+							Object val = entry.getValue();
+							ans = nickName + "上分=" + val.toString() + "\n";
+						}
+						webwxsendmsg(ans, msg.getString("FromUserName"));
+					}
+					//自己说的
 				} else if (msg.getString("ToUserName").indexOf("@@") != -1) {
 					String[] peopleContent = content.split(":<br/>");
 					LOGGER.info("|" + name + "| " + peopleContent[0] + ":\n" + peopleContent[1].replace("<br/>", "\n"));
 				} else {
+					//其他人说的话
+					String ans = ""; 
 					LOGGER.info(name + ": " + content);
-					String ans = xiaodoubi(content);
+					if (iAction == 1) {
+						if (content == "抢") {
+							nickName = UserLists.get(name);
+							ans = nickName +"第一个说抢 为庄家 开始上分吧";
+							iAction = 2;
+						}
+					} else  if (iAction == 2) {
+						boolean bInt = isInteger(content);
+						if (bInt) {
+							nickName = UserLists.get(name);
+							DebManMapList.put(name, content);
+						}
+					}
 					webwxsendmsg(ans, msg.getString("FromUserName"));
-					LOGGER.info("自动回复 " + ans);
+					LOGGER.info("自动回复 ");
 				}
 			} else if(msgType == 3){
-				webwxsendmsg("二蛋还不支持图片呢", msg.getString("FromUserName"));
-			} else if(msgType == 34){
-				webwxsendmsg("二蛋还不支持语音呢", msg.getString("FromUserName"));
+				 
+				LOGGER.info("=========================");
+			} else if(msgType == 34){ 
+				 
+				LOGGER.info("=========================");
 			} else if(msgType == 42){
 				LOGGER.info(name + " 给你发送了一张名片:");
 				LOGGER.info("=========================");
@@ -583,7 +637,7 @@ public class App {
 						}
 					} else {
 						try {
-							Thread.sleep(1000);
+							Thread.sleep(100);
 						} catch (InterruptedException e) {
 							e.printStackTrace();
 						}
