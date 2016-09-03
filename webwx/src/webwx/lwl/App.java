@@ -114,35 +114,6 @@ public class App {
 	}
 
 	/**
-	 * 显示二维码
-	 * 
-	 * @return
-	 */
-	public void showQrCode() {
-
-		String url = "https://login.weixin.qq.com/qrcode/" + this.uuid;
-
-		final File output = new File("temp.jpg");
-
-		HttpRequest.post(url, true, "t", "webwx", "_",
-				DateKit.getCurrentUnixTime()).receive(output);
-
-		if (null != output && output.exists() && output.isFile()) {
-			EventQueue.invokeLater(new Runnable() {
-				public void run() {
-					try {
-						UIManager
-								.setLookAndFeel("com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel");
-						qrCodeFrame = new QRCodeFrame(output.getPath());
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-				}
-			});
-		}
-	}
-
-	/**
 	 * 等待登录
 	 */
 	public String waitForLogin() {
@@ -394,6 +365,7 @@ public class App {
 				+ DateKit.getCurrentUnixTime();
 
 		JSONObject body = new JSONObject();
+
 		body.put("BaseRequest", BaseRequest);
 
 		HttpRequest request = HttpRequest.post(url)
@@ -440,7 +412,7 @@ public class App {
 								continue;
 							}
 							ContactList.add(contact);
-							LOGGER.info("获取联系人=" + contact);
+							// LOGGER.info("获取联系人=" + contact);
 							UserLists.put(contact.getString("UserName"),
 									contact.getString("NickName"));
 						}
@@ -451,6 +423,98 @@ public class App {
 		} catch (Exception e) {
 		}
 		return false;
+	}
+
+	/**
+	 * 获取联系人
+	 */
+	public boolean getContactByUserName(String UserName, String QunUserName) {
+
+		String url = this.base_uri
+				+ "/webwxbatchgetcontact?type=ex&pass_ticket="
+				+ this.pass_ticket + "&skey=" + this.skey + "&r="
+				+ DateKit.getCurrentUnixTime();
+
+		JSONObject body = new JSONObject();
+
+		JSONObject list = new JSONObject();
+
+		JSONArray listInfo = new JSONArray();
+		list.put("UserName", UserName);
+		list.put("EncryChatRoomId", QunUserName);
+		listInfo.add(list);
+		body.put("BaseRequest", BaseRequest);
+		body.put("Count", "1");
+		body.put("List", listInfo);
+		LOGGER.info("[*] " + "查询单个用户报文=" + body);
+		HttpRequest request = HttpRequest.post(url)
+				.header("Content-Type", "application/json;charset=utf-8")
+				.header("Cookie", this.cookie).send(body.toString());
+
+		LOGGER.info("[*] " + request);
+		String res = request.body();
+		request.disconnect();
+
+		if (StringKit.isBlank(res)) {
+			return false;
+		}
+
+		try {
+			JSONObject jsonObject = JSON.parse(res).asObject();
+			LOGGER.info("获取个人信息=" + jsonObject.toString());
+			JSONObject BaseResponse = jsonObject.getJSONObject("BaseResponse");
+			if (null != BaseResponse) {
+				int ret = BaseResponse.getInt("Ret", -1);
+				if (ret == 0) {
+					JSONArray contact = jsonObject.getJSONArray("ContactList");
+					// this.MemberList = jsonObject.getJSONArray("ContactList");
+					// this.ContactList = new JSONArray();
+					if (null != contact) {
+						for (int i = 0, len = contact.size(); i < len; i++) {
+							JSONObject item = contact.getJSONObject(i);
+							// 公众号/服务号
+
+							ContactList.add(item);
+							LOGGER.info("获取联系人=" + contact);
+							UserLists.put(item.getString("UserName"),
+									item.getString("NickName"));
+						}
+						return true;
+					}
+				}
+			}
+		} catch (Exception e) {
+		}
+		return false;
+	}
+
+	/**
+	 * 显示二维码
+	 * 
+	 * @return
+	 */
+	public void showQrCode() {
+
+		String url = "https://login.weixin.qq.com/qrcode/" + this.uuid;
+
+		final File output = new File("temp.jpg");
+
+		HttpRequest.post(url, true, "t", "webwx", "_",
+				DateKit.getCurrentUnixTime()).receive(output);
+
+		if (null != output && output.exists() && output.isFile()) {
+			EventQueue.invokeLater(new Runnable() {
+				public void run() {
+					try {
+						UIManager
+								.setLookAndFeel("com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel");
+						qrCodeFrame = new QRCodeFrame(output.getPath());
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			});
+		}
 	}
 
 	/**
@@ -567,114 +631,136 @@ public class App {
 	/**
 	 * 获取最新消息
 	 */
-	public void handleMsg(JSONObject data){
-		if(null == data){
+	public void handleMsg(JSONObject data) {
+		if (null == data) {
 			return;
 		}
-		
+
 		JSONArray AddMsgList = data.getJSONArray("AddMsgList");
-		
-		for(int i=0,len=AddMsgList.size(); i<len; i++){
+
+		for (int i = 0, len = AddMsgList.size(); i < len; i++) {
 			LOGGER.info("[*] 你有新的消息，请注意查收");
 			JSONObject msg = AddMsgList.getJSONObject(i);
-			LOGGER.info( "msg obj=" +msg.toString() );
+			LOGGER.info("msg obj=" + msg.toString());
 			int msgType = msg.getInt("MsgType", 0);
 			String name = getUserRemarkName(msg.getString("FromUserName"));
 			String content = msg.getString("Content");
 			String nickName = "";
-			String ans  = "";
+			String ans = "";
 			String fromUserName = msg.getString("FromUserName");
 			String toUserName = msg.getString("ToUserName");
-			if(msgType == 51){
+			if (msgType == 51) {
 				LOGGER.info("[*] 成功截获微信初始化消息");
-			} else if(msgType == 1){
-				LOGGER.info("[*] fromUserName =" + fromUserName + "| toUserName=" + toUserName );
-				LOGGER.info("[*] meUserName =" + this.meUserName + "| meNickName=" + this.meNickName );
+			} else if (msgType == 1) {
+				LOGGER.info("[*] fromUserName =" + fromUserName
+						+ "| toUserName=" + toUserName);
+				LOGGER.info("[*] meUserName =" + this.meUserName
+						+ "| meNickName=" + this.meNickName);
 				if (fromUserName.indexOf("@@") != -1) {
-					//群里的信息					
-				   MemberChat memChat = MemberChatList.get(fromUserName);
-				   LOGGER.info("[1] 群消息 名称=" + memChat.NickName);
-				   String[] sayText = content.split(":<br/>");
-				   String orgsayUserName = sayText[0];
-				   String sayUserName = getNickName(orgsayUserName);
-				   String sayInfo = sayText[1];
-				   LOGGER.info("[1] 群消息 成员" + sayUserName +"说:" + sayInfo+"|");
-				   LOGGER.info("[1122] " +" DebManMapList " + DebManMapList +"fromUserName "+fromUserName + "qiangQunName=" +qiangQunName +"content=" +content + "iAction=" +iAction );
-				   if (iAction == 1 && fromUserName.equals(qiangQunName) ) {
-					   //开始抢字
-					   if (sayInfo.equals("抢")) {
-						   LOGGER.info("[1] 群消息 成员" + sayUserName +"是第一个说:" + sayInfo);
-						   iAction = 2;
-						   ans = "开始上分吧小伙伴们";
-						   webwxsendmsg(ans, msg.getString("FromUserName")); 
-						   return;
-					   }
+					// 群里的信息
+					MemberChat memChat = MemberChatList.get(fromUserName);
+					LOGGER.info("[1] 群消息 名称=" + memChat.NickName);
+					String[] sayText = content.split(":<br/>");
+					String orgsayUserName = sayText[0];
+					String sayUserName = getNickName(orgsayUserName);
+					if (sayUserName == null) {
+						LOGGER.info("[1]  UserName=" + orgsayUserName
+								+ " 新加入查询信息");
+						getContactByUserName(orgsayUserName, fromUserName);
+						sayUserName = getNickName(orgsayUserName);
+					}
+					String sayInfo = sayText[1];
+					LOGGER.info("[1] 群消息 成员" + sayUserName + "说:" + sayInfo
+							+ "|");
+					LOGGER.info("[1122] " + " DebManMapList " + DebManMapList
+							+ "fromUserName [" + fromUserName
+							+ "] qiangQunName=[" + qiangQunName + "] content="
+							+ content + "iAction=" + iAction);
+					if (iAction == 1 && fromUserName.equals(qiangQunName)) {
+						// 开始抢字
+						if (sayInfo.equals("抢")) {
+							LOGGER.info("[1] 群消息 成员" + sayUserName + "是第一个说:"
+									+ sayInfo);
+							iAction = 2;
+							ans = "开始上分吧小伙伴们";
+							webwxsendmsg(ans, msg.getString("FromUserName"));
+							continue;
+						}
 
-				   }
-				   if (iAction == 2 && fromUserName.equals(qiangQunName) ) {
-					   //上分了
-					   if (isInteger(sayInfo)) {
-						   DebManMapList.put(orgsayUserName, sayInfo);
-					   } else {
-						   String wrongAns ="@"+sayUserName+"你说的不是数字请输入数字";
-						   webwxsendmsg(ans, fromUserName);						  
-					   }
-					   return;
-				   }
-				   
- 			   			   
-				   
+					}
+					if (iAction == 2 && fromUserName.equals(qiangQunName)) {
+						// 上分了
+						LOGGER.info("[1123]" + "fromUserName [" + fromUserName
+								+ "] qiangQunName=[" + qiangQunName
+								+ "] content=" + content + "iAction=" + iAction);
+						if (isInteger(sayInfo)) {
+							DebManMapList.put(orgsayUserName, sayInfo);
+						} else {
+							String wrongAns = "@" + sayUserName
+									+ "你说的不是数字请输入数字";
+							LOGGER.info(" 非数字回给用户信息=[" + wrongAns + "]");
+							webwxsendmsg(wrongAns,
+									msg.getString("FromUserName"));
+						}
+						continue;
+					}
+
 				} else if (fromUserName.equals(this.meUserName)) {
-					//自己说的
-					LOGGER.info("[2] 群" +qiangQunNickName + " 消息 我说"+content );
+					// 自己说的
+					LOGGER.info("[2] 群" + qiangQunNickName + " 消息 我说" + content);
 					if (content.equals("开始")) {
 						//
-						LOGGER.info("[1] 群" +qiangQunNickName + " 消息 我说匹配"+content );
+						LOGGER.info("[1] 群" + qiangQunNickName + " 消息 我说匹配"
+								+ content);
 						String toUser = msg.getString("ToUserName");
 						MemberChat memChat = MemberChatList.get(toUser);
 						LOGGER.info(memChat.toString());
 						qiangQunName = toUser;
 						qiangQunNickName = memChat.NickName;
-						LOGGER.info("[1] 群" +qiangQunNickName + " 消息 我说"+content );
+						LOGGER.info("[1] 群" + qiangQunNickName + " 消息 我说"
+								+ content);
 						iAction = 1;
-						 return;
+						continue;
 					}
 					if (content.equals("结束封盘")) {
 						//
+						ans = "";
 						String toUser = msg.getString("ToUserName");
-						LOGGER.info("[22]匹配结束封盘" +"ToUserName "+toUser + "iAction=" +iAction );
+						LOGGER.info("[22]匹配结束封盘" + "ToUserName " + toUser
+								+ "iAction=" + iAction);
 						if (toUser.equals(qiangQunName) && iAction == 2) {
 							Iterator iter = DebManMapList.entrySet().iterator();
-							 ans= "";
-							
-							 LOGGER.info("[333]匹配结束封盘" +" DebManMapList size=" + DebManMapList +"ToUserName "+toUser + "iAction=" +iAction );
+
+							LOGGER.info("[333]匹配结束封盘" + " DebManMapList size="
+									+ DebManMapList + "ToUserName " + toUser
+									+ "iAction=" + iAction);
 							while (iter.hasNext()) {
 								Map.Entry entry = (Map.Entry) iter.next();
 								Object key = entry.getKey();
-								LOGGER.info("[4442]匹配结束封盘 key" +key.toString());
+								LOGGER.info("[4442]匹配结束封盘 key" + key.toString());
 								nickName = UserLists.get(key.toString());
 								Object val = entry.getValue();
-								ans = nickName + "上分=" + val.toString() + "\n";
-								LOGGER.info("[444]匹配结束封盘 ans" +ans);
+								ans = ans + nickName + "上分=" + val.toString() + "\n";
+								LOGGER.info("[444]匹配结束封盘 ans" + ans);
 							}
 							webwxsendmsg(ans, toUser);
 							iAction = 3;
-							 return;
+							continue;
 						}
-						 
-					}					
+
+					}
 				}
-				if(SpecialUsers.contains(msg.getString("ToUserName"))){
+				if (SpecialUsers.contains(msg.getString("ToUserName"))) {
 					continue;
-			
-				} 
-			} else if(msgType == 3){
-				 
+
+				}
+			} else if (msgType == 3) {
+
 				LOGGER.info("=========================");
-			} else if(msgType == 34){ 
-				 
+			} else if (msgType == 34) {
+
 				LOGGER.info("=========================");
-			} else if(msgType == 42){
+			} else if (msgType == 42) {
 				LOGGER.info(name + " 给你发送了一张名片:");
 				LOGGER.info("=========================");
 			}
@@ -742,6 +828,13 @@ public class App {
 							LOGGER.info("[*] 你在手机上玩微信被我发现了 %d 次", playWeChat);
 							webwxsync();
 						} else if (arr[1] == 3) {
+							LOGGER.info("[arr[1] == 3]arr[1] == 3");
+							JSONObject data = webwxsync();
+							LOGGER.info("[arr[1] == 3]arr[1] == 3");
+						} else if (arr[1] == 4) {
+							LOGGER.info("[!]有friend cycle info");
+							JSONObject data = webwxsync();
+							LOGGER.info("[!]有friend cycle info end ");
 						} else if (arr[1] == 0) {
 							try {
 								Thread.sleep(100);
