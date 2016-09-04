@@ -94,7 +94,7 @@ public class App {
 				DateKit.getCurrentUnixTime());
 
 		LOGGER.info("[*] " + request);
-
+	 
 		String res = request.body();
 		request.disconnect();
 
@@ -682,7 +682,7 @@ public class App {
 							LOGGER.info("[1] 群消息 成员" + sayUserName + "是第一个说:"
 									+ sayInfo);
 							iAction = 2;
-							ans = "开始上分吧小伙伴们";
+							ans = "开始上分吧小伙伴们  庄为[" + sayUserName + "]";
 							webwxsendmsg(ans, msg.getString("FromUserName"));
 							continue;
 						}
@@ -864,11 +864,11 @@ public class App {
 			LOGGER.info("[*] uuid获取失败");
 		} else {
 			LOGGER.info("[*] 获取到uuid为 [%s]", app.uuid);
-			app.showQrCode();
+			//app.showQrCode();
 			while (!app.waitForLogin().equals("200")) {
 				Thread.sleep(2000);
 			}
-			app.closeQrWindow();
+			//app.closeQrWindow();
 
 			if (!app.login()) {
 				LOGGER.info("微信登录失败");
