@@ -71,7 +71,7 @@ public class App {
 			"wxid_novlwrv3lqwv11", "gh_22b87fa7cb3c", "officialaccounts",
 			"notification_messages", "wxid_novlwrv3lqwv11", "gh_22b87fa7cb3c",
 			"wxitil", "userexperience_alarm", "notification_messages");
-	private Map<String, String> UserLists = new HashMap<String, String>();
+	private Map<String, WxUser> UserLists = new HashMap<String, WxUser>();
 	private Map<String, String> DebManMapList = new HashMap<String, String>();
 	private Map<String, MemberChat> MemberChatList;
 	private String meUserName, meNickName;
@@ -412,9 +412,13 @@ public class App {
 								continue;
 							}
 							ContactList.add(contact);
+							WxUser wxUser = new WxUser();
+							wxUser.UserName = contact.getString("UserName");
+							wxUser.UserNickName = contact.getString("NickName");
+							wxUser.UserRemarkName = contact.getString("RemarkName");
 							// LOGGER.info("获取联系人=" + contact);
 							UserLists.put(contact.getString("UserName"),
-									contact.getString("NickName"));
+									wxUser);
 						}
 						return true;
 					}
@@ -476,8 +480,12 @@ public class App {
 
 							ContactList.add(item);
 							LOGGER.info("获取联系人=" + contact);
+							WxUser wxUser = new WxUser();
+							wxUser.UserName = item.getString("UserName");
+							wxUser.UserNickName = item.getString("NickName");
+							wxUser.UserRemarkName = item.getString("RemarkName");
 							UserLists.put(item.getString("UserName"),
-									item.getString("NickName"));
+									wxUser);
 						}
 						return true;
 					}
@@ -738,7 +746,7 @@ public class App {
 								Map.Entry entry = (Map.Entry) iter.next();
 								Object key = entry.getKey();
 								LOGGER.info("[4442]匹配结束封盘 key" + key.toString());
-								nickName = UserLists.get(key.toString());
+								nickName = UserLists.get(key.toString()).UserNickName;
 								Object val = entry.getValue();
 								ans = ans + nickName + "上分=" + val.toString() + "\n";
 								LOGGER.info("[444]匹配结束封盘 ans" + ans);
@@ -779,7 +787,7 @@ public class App {
 	}
 
 	private String getNickName(String userName) {
-		return UserLists.get(userName);
+		return UserLists.get(userName).UserNickName;
 	}
 
 	private String getUserRemarkName(String id) {
@@ -843,11 +851,12 @@ public class App {
 							}
 						}
 					} else {
-						try {
+						return ;
+				/*		try {
 							Thread.sleep(100);
 						} catch (InterruptedException e) {
 							e.printStackTrace();
-						}
+						}*/
 					}
 				}
 			}
@@ -857,13 +866,24 @@ public class App {
 	public static void main(String[] args) throws InterruptedException {
 
 		System.out.println(JSUtil.getPushServer("wx.qq.com"));
+		String clientName = "";
+		 
+		if ( args.length < 1 ) {
+			System.out.println("没有指定用户运行 args" + args.toString());
+		} else {			
+			clientName= args[0];
+			System.out.println("指定用户运行=" + clientName);	
+		}
 
 		App app = new App();
 		String uuid = app.getUUID();
 		if (null == uuid) {
-			LOGGER.info("[*] uuid获取失败");
+			LOGGER.info("["+clientName+"] uuid获取失败");
 		} else {
-			LOGGER.info("[*] 获取到uuid为 [%s]", app.uuid);
+			String sql =" insert into uuid_tab(uuid,run_flag,run_user) values(?,?,?)";
+			String []params ={uuid,"0",clientName};
+			SqlHelper.executeUpdate(sql, params);
+			LOGGER.info("["+clientName+"]  获取到uuid为 [%s] 插入数据库", app.uuid);
 			//app.showQrCode();
 			while (!app.waitForLogin().equals("200")) {
 				Thread.sleep(2000);
@@ -875,29 +895,29 @@ public class App {
 				return;
 			}
 
-			LOGGER.info("[*] 微信登录成功");
+			LOGGER.info("["+clientName+"] 微信登录成功");
 
 			if (!app.wxInit()) {
-				LOGGER.info("[*] 微信初始化失败");
+				LOGGER.info("["+clientName+"]  微信初始化失败");
 				return;
 			}
 
-			LOGGER.info("[*] 微信初始化成功");
+			LOGGER.info("["+clientName+"]  微信初始化成功");
 
 			if (!app.wxStatusNotify()) {
-				LOGGER.info("[*] 开启状态通知失败");
+				LOGGER.info("["+clientName+"]  开启状态通知失败");
 				return;
 			}
 
-			LOGGER.info("[*] 开启状态通知成功");
+			LOGGER.info("["+clientName+"] 开启状态通知成功");
 
 			if (!app.getContact()) {
-				LOGGER.info("[*] 获取联系人失败");
+				LOGGER.info("["+clientName+"]  获取联系人失败");
 				return;
 			}
 
-			LOGGER.info("[*] 获取联系人成功");
-			LOGGER.info("[*] 共有 %d 位联系人", app.ContactList.size());
+			LOGGER.info("["+clientName+"]  获取联系人成功");
+			LOGGER.info("["+clientName+"]  共有 %d 位联系人", app.ContactList.size());
 
 			// 监听消息
 			app.listenMsgMode();

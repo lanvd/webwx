@@ -10,4 +10,6 @@ public class MemberChat {
    public MemberChat() {
 	   MemberList = new ArrayList<String>();
    }
-}
+};
+
+ 

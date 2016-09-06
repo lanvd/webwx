@@ -37,7 +37,7 @@ public class SqlHelper {
     }  
   
     // 加载驱动，只需要一次  
-    static {  
+   public  static void Init() {  
         try {  
             // 从配置文件dbinfo.properties中读取配置信息  
             pp = new Properties();  
@@ -66,8 +66,21 @@ public class SqlHelper {
     // 得到连接  
     public static Connection getConnection() {  
         try {  
+        	// Init();
+  		   // 驱动程序名
+             String driver = "com.mysql.jdbc.Driver";
+
+             // URL指向要访问的数据库名scutcs
+             String url = "jdbc:mysql://42.51.216.62:3308/webwx";
+
+             // MySQL配置时的用户名
+             String user = "webwx";
+
+             // MySQL配置时的密码
+             String password = "webwx";
+
         	System.out.println("url="+url+"username="+userName+" password="+password);
-            conn = DriverManager.getConnection("jdbc:mysql://42.51.216.62:3308/webwx?user=webwx&password=webwx", userName, password);  
+            conn = DriverManager.getConnection(url, user, password);  
         } catch (SQLException e) {  
             e.printStackTrace();  
         }  
