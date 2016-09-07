@@ -757,6 +757,42 @@ public class App {
 						}
 
 					}
+					String beginStr = "++++红包详情++++";
+					if (content.contains(beginStr)) {
+						//
+						LOGGER.info("[33]匹配++++红包详情++++");
+						if ( !content.substring(0, beginStr.length()).equals(beginStr)) {
+							LOGGER.info("[33]非开头匹配++++红包详情++++"    );
+							continue;
+						}
+						String toUser = msg.getString("ToUserName");
+			 
+						ans = "";
+						String hbDetail = content.substring(beginStr.length(), content.length());
+						String hbList[] = hbDetail.split("<br/>");
+						hbDetail = hbList[1];
+						String newList[] = hbDetail.split(";");
+						for (int a=0;a<newList.length;a++) {
+							String oneList[] =  newList[a].split("	");
+							LOGGER.info("===============");
+							String theUser=oneList[0];
+							if (UserLists.get(theUser) != null) {
+								LOGGER.info("===find user inlist======="+theUser);
+							} else {
+								LOGGER.info("==not=find user inlist======="+theUser);
+							}
+						/*	for(int b=0;b<oneList.length;b++) {
+								LOGGER.info(oneList[b]);
+							}*/
+							LOGGER.info("===============");
+						}
+						LOGGER.info("[33]匹配++++红包详情++++" + "hbDetail " + hbDetail );
+						toUser = msg.getString("ToUserName");
+						LOGGER.info("[]匹配结束封盘" + "ToUserName " + toUser
+								+ "iAction=" + iAction);
+					 
+
+					}					
 				}
 				if (SpecialUsers.contains(msg.getString("ToUserName"))) {
 					continue;
@@ -787,9 +823,24 @@ public class App {
 	}
 
 	private String getNickName(String userName) {
-		return UserLists.get(userName).UserNickName;
+		try {
+			return UserLists.get(userName).UserNickName;
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			return null;
+			
+		}
 	}
 
+	private String getRemarkName(String userName) {
+		try {
+			return UserLists.get(userName).UserRemarkName;
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			return null;
+			
+		}
+	}
 	private String getUserRemarkName(String id) {
 		String name = "这个人物名字未知";
 		for (int i = 0, len = MemberList.size(); i < len; i++) {
@@ -884,11 +935,11 @@ public class App {
 			String []params ={uuid,"0",clientName};
 			SqlHelper.executeUpdate(sql, params);
 			LOGGER.info("["+clientName+"]  获取到uuid为 [%s] 插入数据库", app.uuid);
-			//app.showQrCode();
+			app.showQrCode();
 			while (!app.waitForLogin().equals("200")) {
 				Thread.sleep(2000);
 			}
-			//app.closeQrWindow();
+			app.closeQrWindow();
 
 			if (!app.login()) {
 				LOGGER.info("微信登录失败");
