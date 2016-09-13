@@ -213,13 +213,16 @@ public class App {
 
 	/* 获取聊天群信息 */
 	public void getMemberList(JSONArray memberObj) {
-		MemberChatList.clear();
+		//MemberChatList.clear();
 		if (memberObj != null) {
 			for (int k = 0; k < memberObj.size(); k++) {
 				JSONObject item = memberObj.getJSONObject(k);
 				int contackFlag = item.getInt("ContactFlag", 0);
-				if (contackFlag == 2) {
+				if ( 2 == 2) {
 					String userName = item.getString("UserName");
+					if ( userName.indexOf("@@") == -1) {
+						continue;
+					}
 					String nickName = item.getString("NickName");
 					JSONArray jsonArr = item.getJSONArray("MemberList");
 					MemberChat memInfo = new MemberChat();
@@ -721,10 +724,10 @@ public class App {
 						LOGGER.info("[1] 群" + qiangQunNickName + " 消息 我说匹配"
 								+ content);
 						String toUser = msg.getString("ToUserName");
-						MemberChat memChat = MemberChatList.get(toUser);
-						LOGGER.info(memChat.toString());
+						//MemberChat memChat = MemberChatList.get(toUser);
+						//LOGGER.info(memChat.toString());
 						qiangQunName = toUser;
-						qiangQunNickName = memChat.NickName;
+						//qiangQunNickName = memChat.NickName;
 						LOGGER.info("[1] 群" + qiangQunNickName + " 消息 我说"
 								+ content);
 						iAction = 1;
@@ -935,11 +938,11 @@ public class App {
 			String []params ={uuid,"0",clientName};
 			SqlHelper.executeUpdate(sql, params);
 			LOGGER.info("["+clientName+"]  获取到uuid为 [%s] 插入数据库", app.uuid);
-			app.showQrCode();
+			//app.showQrCode();
 			while (!app.waitForLogin().equals("200")) {
 				Thread.sleep(2000);
 			}
-			app.closeQrWindow();
+		//	app.closeQrWindow();
 
 			if (!app.login()) {
 				LOGGER.info("微信登录失败");
