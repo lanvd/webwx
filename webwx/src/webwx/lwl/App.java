@@ -76,7 +76,7 @@ public class App {
 	private Map<String, MemberChat> MemberChatList;
 	private String meUserName, meNickName;
 	private String qiangQunName, qiangQunNickName;
-
+	private String zhuangMan ="";
 	public App() {
 		System.setProperty("jsse.enableSNIExtension", "false");
 		MemberChatList = new HashMap<String, MemberChat>();
@@ -673,6 +673,7 @@ public class App {
 					LOGGER.info("[1] 群消息 名称=" + memChat.NickName);
 					String[] sayText = content.split(":<br/>");
 					String orgsayUserName = sayText[0];
+					zhuangMan = orgsayUserName;
 					String sayUserName = getNickName(orgsayUserName);
 					if (sayUserName == null) {
 						LOGGER.info("[1]  UserName=" + orgsayUserName
@@ -719,7 +720,7 @@ public class App {
 				} else if (fromUserName.equals(this.meUserName)) {
 					// 自己说的
 					LOGGER.info("[2] 群" + qiangQunNickName + " 消息 我说" + content);
-					if (content.equals("开始")) {
+					if (content.equals("开始") && iAction == 0) {
 						//
 						LOGGER.info("[1] 群" + qiangQunNickName + " 消息 我说匹配"
 								+ content);
@@ -730,9 +731,36 @@ public class App {
 						//qiangQunNickName = memChat.NickName;
 						LOGGER.info("[1] 群" + qiangQunNickName + " 消息 我说"
 								+ content);
-						iAction = 1;
+						iAction = 2;
 						continue;
 					}
+					if (content.equals("庄设为") && iAction == 0) {
+						//
+						LOGGER.info("[1] 群" + qiangQunNickName + " 消息匹配"
+								+ content);
+						String toUser = msg.getString("ToUserName");
+						//MemberChat memChat = MemberChatList.get(toUser);
+						//LOGGER.info(memChat.toString());
+						qiangQunName = toUser;
+						//qiangQunNickName = memChat.NickName;
+						String strInfo [] = content.split("@");
+						String tempZhuangMan = strInfo[1];									
+						LOGGER.info("[1] 群" + qiangQunNickName + " 匹配到庄家="
+								+ tempZhuangMan);
+						zhuangMan = getUserNameByRemarkName(tempZhuangMan);
+						if (zhuangMan != "") {
+							LOGGER.info("[1] 群" + qiangQunNickName + " 找到专家="
+									+ zhuangMan);	
+						} else {
+							LOGGER.info("[1] 群" + qiangQunNickName + "通过备注没有找到专家="
+									+ tempZhuangMan);	
+							continue;
+						}
+						
+						
+						iAction = 1;
+						continue;
+					}					
 					if (content.equals("结束封盘")) {
 						//
 						ans = "";
@@ -834,7 +862,15 @@ public class App {
 			
 		}
 	}
-
+	private String getUserNameByRemarkName(String remarkName) {
+		String userName ="";
+		for(WxUser wxUser: UserLists.values()) {
+			if (wxUser.UserRemarkName == remarkName) {
+				return wxUser.UserName;
+			}
+		}
+		return userName;
+	}
 	private String getRemarkName(String userName) {
 		try {
 			return UserLists.get(userName).UserRemarkName;
